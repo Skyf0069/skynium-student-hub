@@ -1,0 +1,43 @@
+name: Update Calendar
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Se lance tous les jours à 4h du matin
+  workflow_dispatch: # Permet de lancer manuellement depuis GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  update-ics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Télécharger le nouvel emploi du temps (Dynamique)
+        run: |
+          # 1. On calcule la date d'aujourd'hui et celle dans 60 jours
+          START_DATE=$(date +%Y-%m-%d)
+          END_DATE=$(date -d "+60 days" +%Y-%m-%d)
+          
+          # 2. On construit l'URL avec ton ID (resources=7806)
+          # J'ai inséré tes IDs ici 👇
+          URL="https://ade-web-consult.univ-amu.fr/jsp/custom/modules/plannings/anonymous_cal.jsp?projectId=8&resources=7806&calType=ical&firstDate=${START_DATE}&lastDate=${END_DATE}"
+          
+          echo "Téléchargement depuis : $URL"
+          curl -o public/planning.ics "$URL"
+
+      - name: Sauvegarder et Pousser
+        run: |
+          git config --global user.name 'Skynium Bot'
+          git config --global user.email 'bot@skynium.fr'
+          
+          # On vérifie si le fichier a changé
+          if [[ -n $(git status -s public/planning.ics) ]]; then
+            git add public/planning.ics
+            git commit -m "📅 Mise à jour auto de l'emploi du temps"
+            git push
+          else
+            echo "Aucun changement dans l'emploi du temps."
+          fi
