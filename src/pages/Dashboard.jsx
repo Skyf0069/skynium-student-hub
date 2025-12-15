@@ -191,7 +191,7 @@ export default function Dashboard({ session }) {
                   },
                   { 
                     name: "Discord", 
-                    url: "#", 
+                    url: "https://discord.gg/WgMMxwaydW", 
                     icon: <span className="font-black text-lg">Dj</span>, 
                     // Orange (Tertiary)
                     color: "text-skynium-tertiary", 
