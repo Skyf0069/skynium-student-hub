@@ -1,19 +1,15 @@
 import { useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { useAuth0 } from '@auth0/auth0-react'
 import { LogIn } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
+  const { loginWithRedirect } = useAuth0()
 
   const handleLogin = async () => {
     setLoading(true)
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    })
-    if (error) alert(error.message)
-    setLoading(false)
+    await loginWithRedirect()
   }
 
   return (
@@ -38,11 +34,11 @@ export default function Login() {
           className="w-full bg-skynium-primary hover:bg-skynium-secondary text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 shadow-lg shadow-skynium-primary/30"
         >
           {loading ? (
-            <span>Chargement...</span>
+            <span>Redirection SSO...</span>
           ) : (
             <>
               <LogIn size={20} />
-              <span>Se connecter avec Google</span>
+              <span>Se connecter avec Skynium Student Hub</span>
             </>
           )}
         </button>

@@ -1,41 +1,28 @@
-import { useState, useEffect } from 'react'
-import { supabase } from './supabaseClient'
+import { useAuth0 } from '@auth0/auth0-react'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 
 function App() {
-  const [session, setSession] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // Auth0 nous donne directement ces variables prêtes à l'emploi
+  const { isLoading, isAuthenticated } = useAuth0()
 
-  useEffect(() => {
-    // 1. Vérifie si une session existe déjà au chargement de la page
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setLoading(false)
-    })
-
-    // 2. Écoute les changements (connexion / déconnexion en direct)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  // Petit écran de chargement pendant que Supabase réfléchit
-  if (loading) {
-    return <div className="min-h-screen bg-skynium flex items-center justify-center text-skynium-accent">Chargement...</div>
+  // Petit écran de chargement pendant qu'Auth0 réfléchit
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-skynium-light dark:bg-skynium-dark flex flex-col items-center justify-center text-skynium-accent transition-colors duration-500">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-skynium-primary mb-4"></div>
+        <p className="font-medium text-slate-500 dark:text-slate-400">Connexion à Skynium Student Hub...</p>
+      </div>
+    )
   }
 
   // LA LOGIQUE : Pas de session ? Login. Sinon ? Dashboard.
-  if (!session) {
+  if (!isAuthenticated) {
     return <Login />
   }
-  
-  return <Dashboard session={session} />
+
+  // Si on arrive ici, l'étudiant est connecté !
+  return <Dashboard />
 }
 
 export default App

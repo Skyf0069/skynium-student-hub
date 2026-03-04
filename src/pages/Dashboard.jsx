@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../supabaseClient'
+import { useAuth0 } from '@auth0/auth0-react' // Remplacement de Supabase par Auth0
 import { LogOut, MapPin, User, ChevronLeft, ChevronRight, Calendar as CalIcon, Clock } from 'lucide-react'
 import GroupSelector from '../components/GroupSelector'
 import ThemeToggle from '../components/ThemeToggle'
@@ -7,20 +7,42 @@ import { fetchAndParseCalendar } from '../utils/icsParser'
 import { format, addDays, subDays, isSameDay, isToday } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
-export default function Dashboard({ session }) {
+export default function Dashboard() { 
+  // Plus besoin de la prop { session }, Auth0 nous donne directement le user !
+  const { user, logout } = useAuth0()
+
   const [groupeTp, setGroupeTp] = useState(null)
   const [loading, setLoading] = useState(true)
   const [cours, setCours] = useState([])
   const [selectedDate, setSelectedDate] = useState(new Date()) 
 
-  useEffect(() => { getProfile() }, [session])
-  useEffect(() => { if (groupeTp) chargerCalendrier() }, [groupeTp])
+  // On extrait le prénom proprement depuis le SSO
+  const prenomAffiche = user?.name || user?.nickname || "l'ami"
+
+  useEffect(() => { 
+    if (user) getProfile() 
+  }, [user])
+
+  useEffect(() => { 
+    if (groupeTp) chargerCalendrier() 
+  }, [groupeTp])
 
   async function getProfile() {
     setLoading(true)
-    const { data } = await supabase.from('profiles').select('groupe_tp').eq('id', session.user.id).single()
-    if (data?.groupe_tp) setGroupeTp(data.groupe_tp)
+    // Au lieu de contacter la BDD Supabase, on regarde la mémoire du navigateur
+    // C'est instantané et lié à l'ID unique Auth0 de l'étudiant (user.sub)
+    const savedGroup = localStorage.getItem(`skynium_groupe_${user?.sub}`)
+    
+    if (savedGroup) {
+      setGroupeTp(savedGroup)
+    }
     setLoading(false)
+  }
+
+  // Fonction appelée quand le GroupSelector a fini son travail
+  const handleGroupSelected = (groupe) => {
+    localStorage.setItem(`skynium_groupe_${user?.sub}`, groupe)
+    setGroupeTp(groupe)
   }
 
   async function chargerCalendrier() {
@@ -33,33 +55,42 @@ export default function Dashboard({ session }) {
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-skynium-light dark:bg-skynium-dark text-skynium-primary dark:text-white transition-colors duration-300">Chargement...</div>
 
   return (
-    // FOND GLOBAL : Blanc cassé en Light / Violet très sombre en Dark
     <div className="min-h-screen bg-skynium-light dark:bg-skynium-dark text-slate-800 dark:text-white p-4 pb-20 transition-colors duration-500 ease-in-out font-sans">
       
       {/* --- HEADER --- */}
       <nav className="flex justify-between items-center mb-8 pt-2 max-w-3xl mx-auto">
-        <div className="flex items-center gap-3">
-            {/* Logo en dégradé Skynium */}
-            <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-skynium-primary to-skynium-secondary dark:from-white dark:to-skynium-secondary">
-              SSH
-            </h1>
-            {groupeTp && (
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-skynium-primary/10 text-skynium-primary dark:bg-skynium-secondary/20 dark:text-skynium-secondary border border-skynium-primary/20 dark:border-skynium-secondary/50">
-                {groupeTp}
-              </span>
-            )}
+        <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-skynium-primary to-skynium-secondary dark:from-white dark:to-skynium-secondary">
+                  SSH
+                </h1>
+                {groupeTp && (
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-skynium-primary/10 text-skynium-primary dark:bg-skynium-secondary/20 dark:text-skynium-secondary border border-skynium-primary/20 dark:border-skynium-secondary/50">
+                    {groupeTp}
+                  </span>
+                )}
+            </div>
+            {/* MESSAGE DE BIENVENUE RAJOUTÉ ICI */}
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Hey bienvenue, <strong>{prenomAffiche}</strong> :)
+            </span>
         </div>
         
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <button onClick={() => supabase.auth.signOut()} className="p-2 rounded-full bg-white dark:bg-skynium-card shadow-sm border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+          {/* BOUTON DE DECONNEXION AUTH0 */}
+          <button 
+            onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })} 
+            className="p-2 rounded-full bg-white dark:bg-skynium-card shadow-sm border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+          >
             <LogOut size={20} />
           </button>
         </div>
       </nav>
 
       {!groupeTp ? (
-        <GroupSelector session={session} onGroupSelected={setGroupeTp} />
+        // On passe notre nouvelle fonction de sauvegarde au GroupSelector
+        <GroupSelector onGroupSelected={handleGroupSelected} />
       ) : (
         <div className="max-w-3xl mx-auto">
             
@@ -166,7 +197,6 @@ export default function Dashboard({ session }) {
                     name: "ENT AMU", 
                     url: "https://ent.univ-amu.fr", 
                     icon: <User size={22}/>, 
-                    // Rose (Secondary)
                     color: "text-skynium-secondary", 
                     bg: "bg-skynium-secondary/10",
                     border: "hover:border-skynium-secondary"
@@ -175,7 +205,6 @@ export default function Dashboard({ session }) {
                     name: "AMeTICE", 
                     url: "https://ametice.univ-amu.fr", 
                     icon: <MapPin size={22}/>, 
-                    // Orange (Tertiary)
                     color: "text-skynium-tertiary", 
                     bg: "bg-skynium-tertiary/10",
                     border: "hover:border-skynium-tertiary"
@@ -184,7 +213,6 @@ export default function Dashboard({ session }) {
                     name: "Wiki R&T", 
                     url: "#", 
                     icon: <Clock size={22}/>, 
-                    // Rose (Secondary) - Retour au rose pour l'harmonie
                     color: "text-skynium-secondary", 
                     bg: "bg-skynium-secondary/10",
                     border: "hover:border-skynium-secondary"
@@ -193,7 +221,6 @@ export default function Dashboard({ session }) {
                     name: "Discord", 
                     url: "https://discord.gg/WgMMxwaydW", 
                     icon: <span className="font-black text-lg">Dj</span>, 
-                    // Orange (Tertiary)
                     color: "text-skynium-tertiary", 
                     bg: "bg-skynium-tertiary/10",
                     border: "hover:border-skynium-tertiary"
@@ -206,7 +233,6 @@ export default function Dashboard({ session }) {
                         ${item.border} hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center gap-3
                      `}>
                     
-                    {/* Cercle de l'icône */}
                     <div className={`p-3 rounded-full ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-300`}>
                       {item.icon}
                     </div>
