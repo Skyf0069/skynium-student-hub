@@ -5,21 +5,21 @@ import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from 'fi
 import { Book, Award, Calculator, Plus, Trash2, X, AlertCircle, CheckCircle2, TrendingUp, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 
 // ==========================================
-// 1. CONFIGURATION CLOUD (Base de données)
+// 1. CONFIGURATION CLOUD
 // ==========================================
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAXkeZR-QvyJz16rIPNgHlNnlhwyXhu-FU",
-  authDomain: "skynium-student-hub-d9b2d.firebaseapp.com",
-  projectId: "skynium-student-hub-d9b2d",
-  storageBucket: "skynium-student-hub-d9b2d.firebasestorage.app",
-  messagingSenderId: "119905975091",
-  appId: "1:119905975091:web:d5d214cdf3f21092111c46"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'skynium-grades';
+const appId = 'skynium-grades';
 
 // ==========================================
 // 2. DONNÉES DES COEFFICIENTS (Semestre 2)
@@ -54,7 +54,6 @@ const S2_COEFS = {
 // 3. COMPOSANT PRINCIPAL
 // ==========================================
 export default function SkyniumGrades({ onBack }) {
-  // On récupère l'utilisateur Auth0 !
   const { user, isAuthenticated } = useAuth0();
   
   const [grades, setGrades] = useState([]);
@@ -80,15 +79,11 @@ export default function SkyniumGrades({ onBack }) {
   // SYNCHRONISATION CLOUD (Basée sur Auth0)
   // ------------------------------------------
   useEffect(() => {
-    // Si l'utilisateur n'est pas connecté via Auth0, on ne fait rien (sécurité)
     if (!isAuthenticated || !user) return;
 
     const safeUserId = getSafeUserId();
-    
-    // On cible le dossier exact de l'étudiant dans le cloud
     const gradesRef = collection(db, 'artifacts', appId, 'users', safeUserId, 'grades');
     
-    // Écoute en temps réel des modifications
     const unsubscribe = onSnapshot(gradesRef, (snapshot) => {
       const loadedGrades = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -134,7 +129,6 @@ export default function SkyniumGrades({ onBack }) {
       
       await setDoc(gradeRef, newGrade);
       
-      // Reset form
       setNewNoteValue('');
       setNewNoteCoef('1');
       setNewNoteName('');
@@ -160,7 +154,6 @@ export default function SkyniumGrades({ onBack }) {
     const matieresStats = {};
     const ueStats = { ue1: { sum: 0, coef: 0 }, ue2: { sum: 0, coef: 0 }, ue3: { sum: 0, coef: 0 } };
 
-    // 1. Calculer la moyenne de chaque matière
     Object.keys(S2_COEFS).forEach(matId => {
       const matGrades = grades.filter(g => g.matiere === matId);
       if (matGrades.length > 0) {
@@ -170,7 +163,6 @@ export default function SkyniumGrades({ onBack }) {
       }
     });
 
-    // 2. Calculer les moyennes d'UE basées uniquement sur les matières évaluées
     Object.entries(matieresStats).forEach(([matId, moyMatiere]) => {
       const coefs = S2_COEFS[matId];
       if (coefs.ue1 > 0) { ueStats.ue1.sum += moyMatiere * coefs.ue1; ueStats.ue1.coef += coefs.ue1; }
@@ -182,7 +174,6 @@ export default function SkyniumGrades({ onBack }) {
     const moyUe2 = ueStats.ue2.coef > 0 ? ueStats.ue2.sum / ueStats.ue2.coef : null;
     const moyUe3 = ueStats.ue3.coef > 0 ? ueStats.ue3.sum / ueStats.ue3.coef : null;
 
-    // 3. Calculer la moyenne globale du semestre (pondérée sur les UE évaluées)
     let globalSum = 0;
     let globalCoef = 0;
     Object.entries(matieresStats).forEach(([matId, moyMatiere]) => {
@@ -298,7 +289,6 @@ export default function SkyniumGrades({ onBack }) {
         {/* LISTE DES MATIÈRES */}
         <div className="bg-white dark:bg-[#2A0813] rounded-3xl shadow-sm border border-slate-200 dark:border-[#4A1823] overflow-hidden mb-8 transition-colors">
           
-          {/* Section Ressources */}
           <div className="border-b border-slate-100 dark:border-[#4A1823]">
             <button 
               onClick={() => setExpandedSection(prev => ({...prev, R: !prev.R}))}
@@ -344,7 +334,6 @@ export default function SkyniumGrades({ onBack }) {
             )}
           </div>
 
-          {/* Section SAÉ */}
           <div>
             <button 
               onClick={() => setExpandedSection(prev => ({...prev, S: !prev.S}))}
@@ -408,7 +397,6 @@ export default function SkyniumGrades({ onBack }) {
             </div>
 
             <div className="p-6">
-              {/* Formulaire d'ajout */}
               <form onSubmit={handleAddGrade} className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-5 rounded-2xl mb-8">
                 <h4 className="text-sm font-bold text-indigo-800 dark:text-indigo-300 mb-4 uppercase tracking-wider flex items-center gap-2">
                   <Plus size={16} /> Ajouter une note
@@ -432,7 +420,6 @@ export default function SkyniumGrades({ onBack }) {
                 </button>
               </form>
 
-              {/* Liste des notes actuelles */}
               <div>
                 <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-3 uppercase tracking-wider">Notes enregistrées</h4>
                 <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
