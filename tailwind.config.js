@@ -4,18 +4,22 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class', // <--- C'EST CETTE LIGNE QUI MANQUAIT PEUT-ÊTRE
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         skynium: {
-          primary: '#1D0469',   // Ton violet dominant
-          secondary: '#FA5DFF', // Ton rose fluo
-          tertiary: '#FF8A3F',  // Ton orange
+          // --- LE THÈME RUBY ---
+          primary: '#E0115F',   // Le vrai Rouge RuBY officiel
+          secondary: '#FF4D85', // Un rose/rouge vif pour les dégradés et les survols (hovers)
+          tertiary: '#FF9B71',  // Un orange chaleureux pour garder du contraste sur les petites icônes
           
-          dark: '#0d012e',      // Le fond global très sombre
-          card: '#15034d',      // Le fond des cartes (légèrement plus clair)
-          light: '#F8FAFC',     // Le fond clair (blanc cassé)
+          // --- LE MODE SOMBRE RUBY ---
+          dark: '#1A050A',      // Un rouge bordeaux/noir abyssal au lieu du violet très sombre
+          card: '#2A0813',      // Le fond des cartes (légèrement plus clair pour se détacher du fond)
+          
+          // --- LE MODE CLAIR ---
+          light: '#FCF8F9',     // Un blanc cassé avec une microscopique teinte rouge pour l'harmonie
         }
       },
       fontFamily: {
