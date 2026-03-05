@@ -5,9 +5,8 @@ import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from 'fi
 import { Book, Award, Calculator, Plus, Trash2, X, AlertCircle, CheckCircle2, TrendingUp, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 
 // ==========================================
-// 1. CONFIGURATION CLOUD
+// 1. CONFIGURATION CLOUD (SÉCURISÉE VIA .ENV)
 // ==========================================
-
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -59,24 +58,21 @@ export default function SkyniumGrades({ onBack }) {
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // États de l'interface
   const [selectedMatiere, setSelectedMatiere] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState({ R: true, S: true });
 
-  // États du formulaire
   const [newNoteValue, setNewNoteValue] = useState('');
   const [newNoteCoef, setNewNoteCoef] = useState('1');
   const [newNoteName, setNewNoteName] = useState('');
 
-  // SÉCURITÉ : Nettoyage de l'ID Auth0 pour la base de données
   const getSafeUserId = () => {
     if (!user || !user.sub) return 'unknown_user';
     return user.sub.replace(/\|/g, '_');
   };
 
   // ------------------------------------------
-  // SYNCHRONISATION CLOUD (Basée sur Auth0)
+  // SYNCHRONISATION CLOUD
   // ------------------------------------------
   useEffect(() => {
     if (!isAuthenticated || !user) return;
@@ -100,7 +96,7 @@ export default function SkyniumGrades({ onBack }) {
   }, [user, isAuthenticated]);
 
   // ------------------------------------------
-  // ACTIONS DE BASE DE DONNÉES
+  // ACTIONS BDD
   // ------------------------------------------
   const handleAddGrade = async (e) => {
     e.preventDefault();
@@ -148,13 +144,16 @@ export default function SkyniumGrades({ onBack }) {
   };
 
   // ------------------------------------------
-  // MOTEUR DE CALCUL DES MOYENNES
+  // MOTEUR DE CALCUL (BLINDÉ ANTI-CRASH 🛡️)
   // ------------------------------------------
   const calculations = useMemo(() => {
     const matieresStats = {};
     const ueStats = { ue1: { sum: 0, coef: 0 }, ue2: { sum: 0, coef: 0 }, ue3: { sum: 0, coef: 0 } };
 
+    // Initialiser explicitement toutes les matières à null pour éviter l'erreur "undefined"
     Object.keys(S2_COEFS).forEach(matId => {
+      matieresStats[matId] = null; 
+      
       const matGrades = grades.filter(g => g.matiere === matId);
       if (matGrades.length > 0) {
         const sumValues = matGrades.reduce((acc, g) => acc + (g.valeur * g.coef), 0);
@@ -164,10 +163,12 @@ export default function SkyniumGrades({ onBack }) {
     });
 
     Object.entries(matieresStats).forEach(([matId, moyMatiere]) => {
-      const coefs = S2_COEFS[matId];
-      if (coefs.ue1 > 0) { ueStats.ue1.sum += moyMatiere * coefs.ue1; ueStats.ue1.coef += coefs.ue1; }
-      if (coefs.ue2 > 0) { ueStats.ue2.sum += moyMatiere * coefs.ue2; ueStats.ue2.coef += coefs.ue2; }
-      if (coefs.ue3 > 0) { ueStats.ue3.sum += moyMatiere * coefs.ue3; ueStats.ue3.coef += coefs.ue3; }
+      if (moyMatiere !== null) { // Seulement si la matière a des notes
+        const coefs = S2_COEFS[matId];
+        if (coefs.ue1 > 0) { ueStats.ue1.sum += moyMatiere * coefs.ue1; ueStats.ue1.coef += coefs.ue1; }
+        if (coefs.ue2 > 0) { ueStats.ue2.sum += moyMatiere * coefs.ue2; ueStats.ue2.coef += coefs.ue2; }
+        if (coefs.ue3 > 0) { ueStats.ue3.sum += moyMatiere * coefs.ue3; ueStats.ue3.coef += coefs.ue3; }
+      }
     });
 
     const moyUe1 = ueStats.ue1.coef > 0 ? ueStats.ue1.sum / ueStats.ue1.coef : null;
@@ -177,11 +178,13 @@ export default function SkyniumGrades({ onBack }) {
     let globalSum = 0;
     let globalCoef = 0;
     Object.entries(matieresStats).forEach(([matId, moyMatiere]) => {
-      const coefs = S2_COEFS[matId];
-      const coefTotal = coefs.ue1 + coefs.ue2 + coefs.ue3; 
-      if (coefTotal > 0) {
-        globalSum += moyMatiere * coefTotal;
-        globalCoef += coefTotal;
+      if (moyMatiere !== null) {
+        const coefs = S2_COEFS[matId];
+        const coefTotal = coefs.ue1 + coefs.ue2 + coefs.ue3; 
+        if (coefTotal > 0) {
+          globalSum += moyMatiere * coefTotal;
+          globalCoef += coefTotal;
+        }
       }
     });
     
@@ -199,31 +202,31 @@ export default function SkyniumGrades({ onBack }) {
   // ------------------------------------------
   // COMPOSANTS D'INTERFACE
   // ------------------------------------------
-  const renderUeCard = (title, avg, uenum) => {
+  const renderUeCard = (title, avg) => {
     const isValide = avg >= 10;
     
     return (
       <div className={`p-5 rounded-3xl border-2 transition-all duration-300 ${
-        avg === null ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700' :
+        avg == null ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700' :
         isValide ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
       }`}>
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-bold text-slate-700 dark:text-slate-300">{title}</h3>
-          {avg !== null && (
+          {avg != null && (
             isValide ? <CheckCircle2 className="text-emerald-500" size={20}/> : <AlertCircle className="text-red-500" size={20}/>
           )}
         </div>
         <div className="flex items-baseline gap-1">
           <span className={`text-3xl font-black ${
-             avg === null ? 'text-slate-400 dark:text-slate-500' :
+             avg == null ? 'text-slate-400 dark:text-slate-500' :
              isValide ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
           }`}>
-            {avg !== null ? avg.toFixed(2) : '--'}
+            {avg != null ? avg.toFixed(2) : '--'}
           </span>
           <span className="text-sm font-bold text-slate-400">/ 20</span>
         </div>
         <div className="mt-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          {avg === null ? 'Aucune note' : (isValide ? 'UE Validée' : 'UE en danger')}
+          {avg == null ? 'Aucune note' : (isValide ? 'UE Validée' : 'UE en danger')}
         </div>
       </div>
     );
@@ -249,7 +252,7 @@ export default function SkyniumGrades({ onBack }) {
             </button>
             <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Cloud Actif ({user?.nickname})
+              Cloud Actif ({user?.nickname || 'Étudiant'})
             </div>
           </div>
 
@@ -263,11 +266,11 @@ export default function SkyniumGrades({ onBack }) {
             <p className="text-indigo-200 dark:text-slate-400 font-semibold uppercase tracking-widest mb-2 text-sm">Semestre 2 • Moyenne Générale</p>
             <div className="flex justify-center items-baseline gap-2">
               <span className="text-7xl font-black tracking-tighter">
-                {calculations.global !== null ? calculations.global.toFixed(2) : '--'}
+                {calculations.global != null ? calculations.global.toFixed(2) : '--'}
               </span>
               <span className="text-2xl font-bold text-indigo-300 dark:text-slate-500">/ 20</span>
             </div>
-            {calculations.global !== null && (
+            {calculations.global != null && (
               <div className={`inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full font-bold text-sm ${calculations.global >= 10 ? 'bg-emerald-500/20 text-emerald-300' : 'bg-red-500/20 text-red-300'}`}>
                 {calculations.global >= 10 ? <TrendingUp size={16}/> : <AlertCircle size={16}/>}
                 {calculations.global >= 10 ? 'Semestre validé pour le moment' : 'Semestre non validé'}
@@ -281,9 +284,9 @@ export default function SkyniumGrades({ onBack }) {
         
         {/* CARTES UE */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          {renderUeCard("UE 1.1 : Gérer", calculations.ue1, 1)}
-          {renderUeCard("UE 1.2 : Répondre", calculations.ue2, 2)}
-          {renderUeCard("UE 1.3 : Connecter", calculations.ue3, 3)}
+          {renderUeCard("UE 1.1 : Gérer", calculations.ue1)}
+          {renderUeCard("UE 1.2 : Répondre", calculations.ue2)}
+          {renderUeCard("UE 1.3 : Connecter", calculations.ue3)}
         </div>
 
         {/* LISTE DES MATIÈRES */}
@@ -320,8 +323,8 @@ export default function SkyniumGrades({ onBack }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className={`font-black text-lg ${avg === null ? 'text-slate-300 dark:text-slate-600' : avg >= 10 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                          {avg !== null ? avg.toFixed(2) : '-'}
+                        <span className={`font-black text-lg ${avg == null ? 'text-slate-300 dark:text-slate-600' : avg >= 10 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                          {avg != null ? avg.toFixed(2) : '-'}
                         </span>
                         <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <Plus size={16} />
@@ -365,8 +368,8 @@ export default function SkyniumGrades({ onBack }) {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className={`font-black text-lg ${avg === null ? 'text-slate-300 dark:text-slate-600' : avg >= 10 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
-                          {avg !== null ? avg.toFixed(2) : '-'}
+                        <span className={`font-black text-lg ${avg == null ? 'text-slate-300 dark:text-slate-600' : avg >= 10 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                          {avg != null ? avg.toFixed(2) : '-'}
                         </span>
                         <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-amber-600 dark:text-amber-400 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <Plus size={16} />
@@ -389,7 +392,7 @@ export default function SkyniumGrades({ onBack }) {
             <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-[#4A1823] bg-slate-50 dark:bg-[#1A050A]">
               <div>
                 <h3 className="text-2xl font-black text-slate-800 dark:text-white">{selectedMatiere}</h3>
-                <p className="text-sm font-semibold text-slate-500">Moyenne: {calculations.matieres[selectedMatiere] !== undefined ? calculations.matieres[selectedMatiere].toFixed(2) : '--'} / 20</p>
+                <p className="text-sm font-semibold text-slate-500">Moyenne: {calculations.matieres[selectedMatiere] != null ? calculations.matieres[selectedMatiere].toFixed(2) : '--'} / 20</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white dark:bg-[#2A0813] rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white shadow-sm border border-transparent dark:border-[#4A1823] transition-colors">
                 <X size={20} />
