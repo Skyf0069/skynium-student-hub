@@ -22,14 +22,15 @@ export default function Notes() {
           if (response.ok) {
             const data = await response.json();
             setNotes(data.notes || []);
-            if (data.notes && data.notes.length > 0) setActiveNoteId(data.notes[0].id);
+            if (data.notes?.length > 0) setActiveNoteId(data.notes[0].id);
           } else {
-            createNewNote();
+            // Si 404 ou erreur, on crée une note par défaut
+            if (notes.length === 0) createNewNote();
           }
-        } catch (error) {
-          console.error("Erreur n8n:", error);
-          const localFallback = localStorage.getItem(`skynium_notes_${user.sub}`);
-          if (localFallback) setNotes(JSON.parse(localFallback));
+        } catch (e) {
+          setSyncStatus('error');
+          const local = localStorage.getItem(`sk_notes_${user.sub}`);
+          if (local) setNotes(JSON.parse(local));
         }
       };
       loadNotes();
@@ -38,16 +39,23 @@ export default function Notes() {
 
   // 2. ENVOYER À N8N (POST) - Cette fonction ne fait que parler au serveur
   const sendToCloud = async (notesToSave) => {
+    setSyncStatus('saving');
     try {
-      await fetch('https://api.skynium.fr/webhook/save-notes', {
+      const response = await fetch('https://api.skynium.fr/webhook/save-notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.sub, notes: notesToSave })
       });
-    } catch (error) {
-      console.error("Erreur d'envoi à n8n :", error);
+      
+      if (response.ok) {
+        setSyncStatus('synced');
+      } else {
+        setSyncStatus('error');
+      }
+    } catch (e) {
+      setSyncStatus('error');
+      console.error("Erreur Cloud:", e);
     }
-    setIsSaving(false);
   };
 
   // --- ACTIONS ---
@@ -204,19 +212,25 @@ export default function Notes() {
         {activeNote ? (
           <>
             {/* Header de l'éditeur */}
-            <header className="px-8 py-4 bg-white dark:bg-skynium-card border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-0">
-              <input
-                type="text"
-                value={activeNote.title}
-                onChange={(e) => updateActiveNote('title', e.target.value)}
-                placeholder="Titre de la note..."
-                className="text-2xl font-black bg-transparent border-none outline-none focus:ring-0 text-slate-800 dark:text-white w-2/3 placeholder-slate-300 dark:placeholder-slate-600"
-              />
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-                {isSaving ? (
-                  <><div className="w-2 h-2 bg-skynium-tertiary rounded-full animate-pulse"></div> Sauvegarde en cours...</>
-                ) : (
-                  <><div className="w-2 h-2 bg-green-500 rounded-full"></div> Synchronisé</>
+            <header className="p-4 bg-white dark:bg-slate-900 border-b dark:border-slate-800 flex justify-between items-center">
+              <input value={activeNote.title} onChange={e => updateActiveNote('title', e.target.value)} className="bg-transparent font-bold text-xl outline-none dark:text-white w-1/2" />
+              
+              {/* STATUS DE SYNCHRO AMÉLIORÉ */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] font-bold uppercase tracking-wider transition-all">
+                {syncStatus === 'saving' && (
+                  <div className="flex items-center gap-2 text-skynium-tertiary">
+                    <div className="w-2 h-2 bg-skynium-tertiary rounded-full animate-pulse"></div> Envoi...
+                  </div>
+                )}
+                {syncStatus === 'synced' && (
+                  <div className="flex items-center gap-2 text-green-500">
+                    <Check size={14} /> Synchronisé
+                  </div>
+                )}
+                {syncStatus === 'error' && (
+                  <div className="flex items-center gap-2 text-red-500">
+                    <CloudOff size={14} /> Erreur Cloud
+                  </div>
                 )}
               </div>
             </header>
