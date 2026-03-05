@@ -1,9 +1,14 @@
+import { useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import Grades from './pages/Grades'
 
 function App() {
   const { isLoading, isAuthenticated } = useAuth0()
+  
+  // 🎥 L'ÉTAT "RÉGIE" : Permet de switcher de vue (caméra 1 : dashboard, caméra 2 : grades)
+  const [currentPage, setCurrentPage] = useState('dashboard')
 
   if (isLoading) {
     return (
@@ -20,7 +25,17 @@ function App() {
 
   return (
     <div className="min-h-screen bg-skynium-light dark:bg-skynium-dark relative transition-colors duration-500">
-      <Dashboard />
+      
+      {/* 📺 ÉCRAN 1 : Le Dashboard */}
+      {currentPage === 'dashboard' && (
+        <Dashboard onGoToGrades={() => setCurrentPage('grades')} />
+      )}
+      
+      {/* 📺 ÉCRAN 2 : Le Calculateur de Moyenne */}
+      {currentPage === 'grades' && (
+        <Grades onBack={() => setCurrentPage('dashboard')} />
+      )}
+      
     </div>
   )
 }

@@ -13,6 +13,7 @@
     "@auth0/auth0-react": "^2.15.0",
     "@supabase/supabase-js": "^2.87.1",
     "date-fns": "^4.1.0",
+    "firebase": "^12.10.0",
     "ical.js": "^2.2.1",
     "lucide-react": "^0.561.0",
     "react": "^19.2.0",
