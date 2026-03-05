@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
-import { LogOut, MapPin, User, ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, FileText } from 'lucide-react'
+import { LogOut, MapPin, User, ChevronLeft, ChevronRight, Calendar as CalIcon, Clock } from 'lucide-react'
 import GroupSelector from '../components/GroupSelector'
 import ThemeToggle from '../components/ThemeToggle'
 import { fetchAndParseCalendar } from '../utils/icsParser'
 import { format, addDays, subDays, isSameDay, isToday } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
-// Ajout de la prop "onGoToNotes" pour pouvoir ouvrir les notes depuis le Dashboard
-export default function Dashboard({ onGoToNotes }) { 
+export default function Dashboard() { 
   const { user, logout } = useAuth0()
 
   const [groupeTp, setGroupeTp] = useState(null)
@@ -190,20 +189,9 @@ export default function Dashboard({ onGoToNotes }) {
                 Hub Skynium
               </h3>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 
-                {/* 1. Bouton Notes (Nouveau !) */}
-                <button 
-                  onClick={onGoToNotes}
-                  className="bg-skynium-primary text-white p-4 rounded-2xl shadow-lg shadow-skynium-primary/30 border border-transparent hover:-translate-y-1 hover:bg-skynium-secondary transition-all duration-300 group flex flex-col items-center gap-3 cursor-pointer"
-                >
-                  <div className="p-3 rounded-full bg-white/20 text-white group-hover:scale-110 transition-transform duration-300">
-                    <FileText size={22} />
-                  </div>
-                  <span className="font-bold text-sm">Skynium Notes</span>
-                </button>
-
-                {/* 2. ENT AMU */}
+                {/* 1. ENT AMU */}
                 <a href="https://ent.univ-amu.fr" target="_blank" rel="noopener noreferrer" 
                    className="bg-white dark:bg-skynium-card p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-skynium-secondary hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center gap-3">
                   <div className="p-3 rounded-full bg-skynium-secondary/10 text-skynium-secondary group-hover:scale-110 transition-transform duration-300">
@@ -214,7 +202,7 @@ export default function Dashboard({ onGoToNotes }) {
                   </span>
                 </a>
 
-                {/* 3. AMeTICE */}
+                {/* 2. AMeTICE */}
                 <a href="https://ametice.univ-amu.fr" target="_blank" rel="noopener noreferrer" 
                    className="bg-white dark:bg-skynium-card p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-skynium-tertiary hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center gap-3">
                   <div className="p-3 rounded-full bg-skynium-tertiary/10 text-skynium-tertiary group-hover:scale-110 transition-transform duration-300">
@@ -225,7 +213,7 @@ export default function Dashboard({ onGoToNotes }) {
                   </span>
                 </a>
 
-                {/* 4. Discord */}
+                {/* 3. Discord */}
                 <a href="https://discord.gg/WgMMxwaydW" target="_blank" rel="noopener noreferrer" 
                    className="bg-white dark:bg-skynium-card p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-indigo-500 hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center gap-3">
                   <div className="p-3 rounded-full bg-indigo-500/10 text-indigo-500 group-hover:scale-110 transition-transform duration-300">
