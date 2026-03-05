@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import ReactMarkdown from 'react-markdown'
 import { Plus, FileText, Trash2, LogIn, Layout, Check, CloudOff } from 'lucide-react'
@@ -135,7 +135,7 @@ export default function Notes() {
       <div className="bg-white dark:bg-skynium-card p-10 rounded-3xl shadow-xl text-center border border-slate-100 dark:border-slate-800">
         <Layout size={48} className="mx-auto text-skynium-primary mb-6" />
         <h1 className="text-3xl font-black text-skynium-primary dark:text-white mb-8">Skynium Notes</h1>
-        <button onClick={() => loginWithRedirect()} className="w-full bg-skynium-primary hover:bg-skynium-secondary text-white font-bold py-4 px-6 rounded-2xl flex items-center gap-3 transition-all">
+        <button onClick={() => loginWithRedirect()} className="w-full bg-skynium-primary hover:bg-skynium-secondary text-white font-bold py-4 px-6 rounded-2xl flex items-center gap-3 transition-all justify-center">
           <LogIn size={20} /> Se connecter via SSO
         </button>
       </div>
@@ -144,6 +144,7 @@ export default function Notes() {
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-skynium-dark overflow-hidden transition-colors duration-500 font-sans">
+      {/* SIDEBAR */}
       <aside className="w-72 bg-white dark:bg-skynium-card border-r border-slate-200 dark:border-slate-800 flex flex-col z-10 transition-colors duration-500">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
           <span className="font-black text-skynium-primary dark:text-white tracking-tighter text-lg">SKYNIUM NOTES</span>
@@ -171,6 +172,7 @@ export default function Notes() {
         </div>
       </aside>
 
+      {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col">
         {activeNote ? (
           <>
