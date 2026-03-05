@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
-import { useAuth0 } from '@auth0/auth0-react' // Remplacement de Supabase par Auth0
-import { LogOut, MapPin, User, ChevronLeft, ChevronRight, Calendar as CalIcon, Clock } from 'lucide-react'
+import { useAuth0 } from '@auth0/auth0-react'
+import { LogOut, MapPin, User, ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, FileText } from 'lucide-react'
 import GroupSelector from '../components/GroupSelector'
 import ThemeToggle from '../components/ThemeToggle'
 import { fetchAndParseCalendar } from '../utils/icsParser'
 import { format, addDays, subDays, isSameDay, isToday } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
-export default function Dashboard() { 
-  // Plus besoin de la prop { session }, Auth0 nous donne directement le user !
+// Ajout de la prop "onGoToNotes" pour pouvoir ouvrir les notes depuis le Dashboard
+export default function Dashboard({ onGoToNotes }) { 
   const { user, logout } = useAuth0()
 
   const [groupeTp, setGroupeTp] = useState(null)
@@ -16,7 +16,6 @@ export default function Dashboard() {
   const [cours, setCours] = useState([])
   const [selectedDate, setSelectedDate] = useState(new Date()) 
 
-  // On extrait le prénom proprement depuis le SSO
   const prenomAffiche = user?.name || user?.nickname || "l'ami"
 
   useEffect(() => { 
@@ -29,17 +28,13 @@ export default function Dashboard() {
 
   async function getProfile() {
     setLoading(true)
-    // Au lieu de contacter la BDD Supabase, on regarde la mémoire du navigateur
-    // C'est instantané et lié à l'ID unique Auth0 de l'étudiant (user.sub)
     const savedGroup = localStorage.getItem(`skynium_groupe_${user?.sub}`)
-    
     if (savedGroup) {
       setGroupeTp(savedGroup)
     }
     setLoading(false)
   }
 
-  // Fonction appelée quand le GroupSelector a fini son travail
   const handleGroupSelected = (groupe) => {
     localStorage.setItem(`skynium_groupe_${user?.sub}`, groupe)
     setGroupeTp(groupe)
@@ -64,13 +59,19 @@ export default function Dashboard() {
                 <h1 className="text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-skynium-primary to-skynium-secondary dark:from-white dark:to-skynium-secondary">
                   SSH
                 </h1>
+                
+                {/* BOUTON TP CLIQUABLE (Permet de changer de groupe) */}
                 {groupeTp && (
-                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-skynium-primary/10 text-skynium-primary dark:bg-skynium-secondary/20 dark:text-skynium-secondary border border-skynium-primary/20 dark:border-skynium-secondary/50">
-                    {groupeTp}
-                  </span>
+                  <button 
+                    onClick={() => setGroupeTp(null)}
+                    title="Changer de groupe"
+                    className="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-skynium-primary/10 text-skynium-primary dark:bg-skynium-secondary/20 dark:text-skynium-secondary border border-skynium-primary/20 dark:border-skynium-secondary/50 hover:bg-skynium-primary hover:text-white dark:hover:bg-skynium-secondary dark:hover:text-white transition-all cursor-pointer group"
+                  >
+                    {groupeTp} 
+                    <span className="text-[10px] opacity-70 group-hover:opacity-100 transition-opacity">▼</span>
+                  </button>
                 )}
             </div>
-            {/* MESSAGE DE BIENVENUE RAJOUTÉ ICI */}
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Hey bienvenue, <strong>{prenomAffiche}</strong> :)
             </span>
@@ -78,7 +79,6 @@ export default function Dashboard() {
         
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          {/* BOUTON DE DECONNEXION AUTH0 */}
           <button 
             onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })} 
             className="p-2 rounded-full bg-white dark:bg-skynium-card shadow-sm border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
@@ -89,7 +89,6 @@ export default function Dashboard() {
       </nav>
 
       {!groupeTp ? (
-        // On passe notre nouvelle fonction de sauvegarde au GroupSelector
         <GroupSelector onGroupSelected={handleGroupSelected} />
       ) : (
         <div className="max-w-3xl mx-auto">
@@ -138,7 +137,7 @@ export default function Dashboard() {
                             <div className={`absolute left-0 top-6 bottom-6 w-1.5 rounded-r-full ${c.isAutonomie ? 'bg-slate-400' : 'bg-skynium-secondary'}`}></div>
 
                             <div className="pl-4">
-                                {/* Tag Type (R101...) */}
+                                {/* Tag Type */}
                                 <div className="flex justify-between items-start mb-2">
                                   <div className="flex items-center gap-3">
                                     <span className={`text-2xl font-black tracking-tight ${c.isAutonomie ? 'text-slate-500 dark:text-slate-400' : 'text-skynium-primary dark:text-white'}`}>
@@ -187,61 +186,56 @@ export default function Dashboard() {
               <div className="border-t border-slate-200 dark:border-slate-800 mb-8"></div>
               
               <h3 className="text-slate-400 dark:text-slate-500 font-bold mb-6 uppercase text-xs tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-skynium-secondary shadow-[0_0_10px_#FA5DFF]"></span>
+                <span className="w-2 h-2 rounded-full bg-skynium-secondary shadow-[0_0_10px_var(--tw-shadow-color)] shadow-skynium-secondary/50"></span>
                 Hub Skynium
               </h3>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { 
-                    name: "ENT AMU", 
-                    url: "https://ent.univ-amu.fr", 
-                    icon: <User size={22}/>, 
-                    color: "text-skynium-secondary", 
-                    bg: "bg-skynium-secondary/10",
-                    border: "hover:border-skynium-secondary"
-                  },
-                  { 
-                    name: "AMeTICE", 
-                    url: "https://ametice.univ-amu.fr", 
-                    icon: <MapPin size={22}/>, 
-                    color: "text-skynium-tertiary", 
-                    bg: "bg-skynium-tertiary/10",
-                    border: "hover:border-skynium-tertiary"
-                  },
-                  { 
-                    name: "Wiki R&T", 
-                    url: "#", 
-                    icon: <Clock size={22}/>, 
-                    color: "text-skynium-secondary", 
-                    bg: "bg-skynium-secondary/10",
-                    border: "hover:border-skynium-secondary"
-                  },
-                  { 
-                    name: "Discord", 
-                    url: "https://discord.gg/WgMMxwaydW", 
-                    icon: <span className="font-black text-lg">Dj</span>, 
-                    color: "text-skynium-tertiary", 
-                    bg: "bg-skynium-tertiary/10",
-                    border: "hover:border-skynium-tertiary"
-                  },
-                ].map((item, i) => (
-                  <a key={i} href={item.url} target="_blank" rel="noopener noreferrer" 
-                     className={`
-                        bg-white dark:bg-skynium-card p-4 rounded-2xl shadow-sm 
-                        border border-slate-100 dark:border-slate-800 
-                        ${item.border} hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center gap-3
-                     `}>
-                    
-                    <div className={`p-3 rounded-full ${item.bg} ${item.color} group-hover:scale-110 transition-transform duration-300`}>
-                      {item.icon}
-                    </div>
-                    
-                    <span className="font-bold text-sm text-slate-700 dark:text-slate-300 group-hover:text-skynium-primary dark:group-hover:text-white transition-colors">
-                        {item.name}
-                    </span>
-                  </a>
-                ))}
+                
+                {/* 1. Bouton Notes (Nouveau !) */}
+                <button 
+                  onClick={onGoToNotes}
+                  className="bg-skynium-primary text-white p-4 rounded-2xl shadow-lg shadow-skynium-primary/30 border border-transparent hover:-translate-y-1 hover:bg-skynium-secondary transition-all duration-300 group flex flex-col items-center gap-3 cursor-pointer"
+                >
+                  <div className="p-3 rounded-full bg-white/20 text-white group-hover:scale-110 transition-transform duration-300">
+                    <FileText size={22} />
+                  </div>
+                  <span className="font-bold text-sm">Skynium Notes</span>
+                </button>
+
+                {/* 2. ENT AMU */}
+                <a href="https://ent.univ-amu.fr" target="_blank" rel="noopener noreferrer" 
+                   className="bg-white dark:bg-skynium-card p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-skynium-secondary hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center gap-3">
+                  <div className="p-3 rounded-full bg-skynium-secondary/10 text-skynium-secondary group-hover:scale-110 transition-transform duration-300">
+                    <User size={22} />
+                  </div>
+                  <span className="font-bold text-sm text-slate-700 dark:text-slate-300 group-hover:text-skynium-primary dark:group-hover:text-white transition-colors">
+                    ENT AMU
+                  </span>
+                </a>
+
+                {/* 3. AMeTICE */}
+                <a href="https://ametice.univ-amu.fr" target="_blank" rel="noopener noreferrer" 
+                   className="bg-white dark:bg-skynium-card p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-skynium-tertiary hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center gap-3">
+                  <div className="p-3 rounded-full bg-skynium-tertiary/10 text-skynium-tertiary group-hover:scale-110 transition-transform duration-300">
+                    <MapPin size={22} />
+                  </div>
+                  <span className="font-bold text-sm text-slate-700 dark:text-slate-300 group-hover:text-skynium-primary dark:group-hover:text-white transition-colors">
+                    AMeTICE
+                  </span>
+                </a>
+
+                {/* 4. Discord */}
+                <a href="https://discord.gg/WgMMxwaydW" target="_blank" rel="noopener noreferrer" 
+                   className="bg-white dark:bg-skynium-card p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 hover:border-indigo-500 hover:-translate-y-1 transition-all duration-300 group flex flex-col items-center gap-3">
+                  <div className="p-3 rounded-full bg-indigo-500/10 text-indigo-500 group-hover:scale-110 transition-transform duration-300">
+                    <span className="font-black text-lg leading-none">Dj</span>
+                  </div>
+                  <span className="font-bold text-sm text-slate-700 dark:text-slate-300 group-hover:text-indigo-500 dark:group-hover:text-white transition-colors">
+                    Discord R&T
+                  </span>
+                </a>
+
               </div>
             </div>
         </div>
